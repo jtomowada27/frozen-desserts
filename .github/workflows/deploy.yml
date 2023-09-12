@@ -1,0 +1,71 @@
+name: deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          # Install Ruby and Bundler if not already installed
+          sudo apt update
+          sudo apt install ruby-full
+          
+          # Check which ruby version
+          ruby --version
+          
+          # We need a specific ruby version (3.2.1) we will install Ruby version control manager (Rbenv)
+          # Install required dependencies
+          sudo apt install git curl autoconf bison build-essential libssl-dev libyaml-dev libreadline6-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm6 libgdbm-dev libdb-dev
+          
+          # Get Rbenv installation script
+          curl -fsSL https://github.com/rbenv/rbenv-installer/raw/HEAD/bin/rbenv-installer | bash
+
+          # Add a directory path that holds Rbenv files to your system path to use its command-line tool
+          echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.bashrc
+          echo 'eval "$(rbenv init -)"' >> ~/.bashrc
+          source ~/.bashrc
+
+          # To check installed version
+          rbenv -v
+
+          # Install Ruby using Rbenv
+          rbenv install 3.2.1
+
+          # Set the system-wide default Ruby version
+          rbenv global 3.2.1
+          rbenv local 3.2.1
+
+          # Install Bundler
+          gem install bundler
+          bundle install
+
+          # Set correct Ruby version
+          rbenv rehash
+
+          # Install rails
+          gem install rails
+          
+      - name: Clone frozen-desserts github
+        run: |
+          # Install git
+          sudo apt-get install git
+
+          # Clone git repository (this will clone my forked repository of Strongminds/frozen-desserts)
+          git clone https://github.com/jtomowada27/frozen-desserts.git
+        
+      - name: Run tests
+        run: bundle exec rspec
+
+      - name: Deploy to EC2
+        run: |
+          # Deploy Rails server on port 3002
+          rails s -p 3002
